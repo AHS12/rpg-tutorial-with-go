@@ -31,12 +31,12 @@ type Potion struct {
 }
 
 type Game struct {
-	player  *Player
-	enemies []*Enemy
-	potions []*Potion
-	// connectedControllers holds a slice of GamepadIDs representing the
-	// currently connected game controllers. Each GamepadID corresponds
-	// to a unique identifier for a connected gamepad device.
+	player           *Player
+	enemies          []*Enemy
+	potions          []*Potion
+	tileMapJSON      *TileMapJSON
+	tileMapFloorImg  *ebiten.Image
+	tileMapObjectImg *ebiten.Image
 	connectedControllers []ebiten.GamepadID
 	GamepadID            ebiten.GamepadID
 }
@@ -45,6 +45,7 @@ const (
 	KB_SPEED  = 2
 	GP_SPEED  = 2.5
 	DEAD_ZONE = 0.1
+	TILE_SIZE = 16
 )
 
 var (
@@ -182,7 +183,6 @@ func (g *Game) Update() error {
 			g.player.Health += potion.HealAmount
 		}
 	}
-	
 
 	return nil
 }
@@ -191,10 +191,65 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	// ebitenutil.DebugPrint(screen, "Hello, World!")
 	screen.Fill(color.RGBA{120, 180, 255, 255})
 	// ebitenutil.DebugPrint(screen, fmt.Sprintf("X: %.2f Y: %.2f", g.player.X, g.player.Y))
-	ebitenutil.DebugPrint(screen, fmt.Sprintf("HP: %d ", g.player.Health))
-	//draw the player
-	// screen.DrawImage(g.PlayerImage, &ebiten.DrawImageOptions{})
+	//start drawing map
 	opts := ebiten.DrawImageOptions{}
+
+	for _, layer := range g.tileMapJSON.Layers {
+		// fmt.Println("Starting to process Layer:", layer.Name, "ID:", layer.Id)
+		var tileset *ebiten.Image
+		var tilesetWidth int
+		var firstgid int
+
+		if layer.Name == "Floor" {
+			tileset = g.tileMapFloorImg
+			tilesetWidth = tileset.Bounds().Dx() / TILE_SIZE
+			firstgid = g.tileMapJSON.TileSets[0].FirstGID
+		} else if layer.Name == "Object" {
+			tileset = g.tileMapObjectImg
+			tilesetWidth = tileset.Bounds().Dx() / TILE_SIZE
+			firstgid = g.tileMapJSON.TileSets[1].FirstGID
+		}
+
+		// Loop over the tiles
+		for index, tileID := range layer.Data {
+			opts.GeoM.Reset()
+
+			// Skip empty tiles
+			if tileID == 0 {
+				continue
+			}
+
+			// Calculate the tile position in the world
+			x := (index % layer.Width) * TILE_SIZE
+			y := (index / layer.Width) * TILE_SIZE
+
+			// Adjust the tile ID based on the tileset's firstgid
+			adjustedID := tileID - firstgid + 1
+
+			// Calculate the position in the tileset image
+			srcX := ((adjustedID - 1) % tilesetWidth) * TILE_SIZE
+			srcY := ((adjustedID - 1) / tilesetWidth) * TILE_SIZE
+
+			// Safety check to ensure we're not accessing outside the tileset bounds
+			tilesetBounds := tileset.Bounds()
+			if srcX < 0 || srcY < 0 || srcX+16 > tilesetBounds.Dx() || srcY+16 > tilesetBounds.Dy() {
+				fmt.Printf("WARNING: Tile ID %d adjusted to %d gives invalid source rect (%d,%d,%d,%d) for tileset bounds (%d,%d)\n",
+					tileID, adjustedID, srcX, srcY, srcX+TILE_SIZE, srcY+TILE_SIZE, tilesetBounds.Dx(), tilesetBounds.Dy())
+				continue
+			}
+
+			// Draw the tile
+			opts.GeoM.Translate(float64(x), float64(y))
+			screen.DrawImage(
+				tileset.SubImage(image.Rect(srcX, srcY, srcX+TILE_SIZE, srcY+TILE_SIZE)).(*ebiten.Image),
+				&opts,
+			)
+		}
+		// fmt.Println("Processing Layer Completed:", layer.Name, "ID:", layer.Id)
+	}
+
+	ebitenutil.DebugPrint(screen, fmt.Sprintf("HP: %d ", g.player.Health))
+
 	opts.GeoM.Translate(g.player.X, g.player.Y)
 	screen.DrawImage(g.player.Img.SubImage(
 		image.Rect(0, 0, 16, 16),
@@ -221,7 +276,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
-	// return ebiten.WindowSize()
+	//return ebiten.WindowSize()
 	return 320, 240
 }
 
@@ -243,13 +298,25 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	tileMapJSON, err := NewTileMapJSON("assets/maps/spawn-map.json")
+	if err != nil {
+		log.Fatal(err)
+	}
+	tileMapFloorImg, _, err := ebitenutil.NewImageFromFile("assets/images/TilesetFloor.png")
+	if err != nil {
+		log.Fatal(err)
+	}
+	tileMapObjectImg, _, err := ebitenutil.NewImageFromFile("assets/images/TilesetNature.png")
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	if err := ebiten.RunGame(&Game{
 		player: &Player{
 			&Sprite{
 				Img: playerImg,
-				X:   100,
-				Y:   100,
+				X:   17,
+				Y:   15,
 			},
 			100,
 		},
@@ -283,8 +350,8 @@ func main() {
 			{
 				&Sprite{
 					Img: potionImg,
-					X: 120,
-					Y: 128,
+					X:   120,
+					Y:   128,
 				},
 				10,
 			},
@@ -292,12 +359,15 @@ func main() {
 			{
 				&Sprite{
 					Img: potionImg,
-					X: 190,
-					Y: 128,
+					X:   190,
+					Y:   128,
 				},
 				10,
 			},
 		},
+		tileMapJSON:      tileMapJSON,
+		tileMapFloorImg:  tileMapFloorImg,
+		tileMapObjectImg: tileMapObjectImg,
 	}); err != nil {
 		log.Fatal(err)
 	}
