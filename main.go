@@ -5,40 +5,22 @@ import (
 	"image"
 	"image/color"
 	"log"
+	"rpg-tutorial/entities"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 )
 
-type Sprite struct {
-	X, Y float64
-	Img  *ebiten.Image
-}
-
-type Player struct {
-	*Sprite
-	Health uint16
-}
-
-type Enemy struct {
-	*Sprite
-	FollowsPlayer bool
-}
-
-type Potion struct {
-	*Sprite
-	HealAmount uint16
-}
-
 type Game struct {
-	player           *Player
-	enemies          []*Enemy
-	potions          []*Potion
-	tileMapJSON      *TileMapJSON
-	tileMapFloorImg  *ebiten.Image
-	tileMapObjectImg *ebiten.Image
+	player               *entities.Player
+	enemies              []*entities.Enemy
+	potions              []*entities.Potion
+	tileMapJSON          *TileMapJSON
+	tileMapFloorImg      *ebiten.Image
+	tileMapObjectImg     *ebiten.Image
 	connectedControllers []ebiten.GamepadID
 	GamepadID            ebiten.GamepadID
+	camera               *Camera
 }
 
 const (
@@ -184,6 +166,14 @@ func (g *Game) Update() error {
 		}
 	}
 
+	g.camera.FollowTarget(g.player.X + TILE_SIZE/2, g.player.Y+ TILE_SIZE/2, 320, 240)
+	g.camera.Constrain(
+		float64(g.tileMapJSON.Layers[0].Width * TILE_SIZE),
+		float64(g.tileMapJSON.Layers[0].Height * TILE_SIZE),
+		320,
+		240,
+	)
+
 	return nil
 }
 
@@ -240,6 +230,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 			// Draw the tile
 			opts.GeoM.Translate(float64(x), float64(y))
+			opts.GeoM.Translate(g.camera.X, g.camera.Y)
 			screen.DrawImage(
 				tileset.SubImage(image.Rect(srcX, srcY, srcX+TILE_SIZE, srcY+TILE_SIZE)).(*ebiten.Image),
 				&opts,
@@ -251,6 +242,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	ebitenutil.DebugPrint(screen, fmt.Sprintf("HP: %d ", g.player.Health))
 
 	opts.GeoM.Translate(g.player.X, g.player.Y)
+	opts.GeoM.Translate(g.camera.X, g.camera.Y)
 	screen.DrawImage(g.player.Img.SubImage(
 		image.Rect(0, 0, 16, 16),
 	).(*ebiten.Image), &opts)
@@ -258,6 +250,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	opts.GeoM.Reset()
 	for _, enemy := range g.enemies {
 		opts.GeoM.Translate(enemy.X, enemy.Y)
+		opts.GeoM.Translate(g.camera.X, g.camera.Y)
 		screen.DrawImage(enemy.Img.SubImage(
 			image.Rect(0, 0, 16, 16),
 		).(*ebiten.Image), &opts)
@@ -266,6 +259,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	opts.GeoM.Reset()
 	for _, potion := range g.potions {
 		opts.GeoM.Translate(potion.X, potion.Y)
+		opts.GeoM.Translate(g.camera.X, g.camera.Y)
 		screen.DrawImage(potion.Img.SubImage(
 			image.Rect(0, 0, 16, 16),
 		).(*ebiten.Image), &opts)
@@ -312,62 +306,63 @@ func main() {
 	}
 
 	if err := ebiten.RunGame(&Game{
-		player: &Player{
-			&Sprite{
+		player: &entities.Player{
+			Sprite: &entities.Sprite{
 				Img: playerImg,
 				X:   17,
 				Y:   15,
 			},
-			100,
+			Health: 100,
 		},
-		enemies: []*Enemy{
+		enemies: []*entities.Enemy{
 			{
-				&Sprite{
+				Sprite: &entities.Sprite{
 					Img: skeletonImg,
 					X:   50,
 					Y:   55,
 				},
-				true,
+				FollowsPlayer: true,
 			},
 			{
-				&Sprite{
+				Sprite: &entities.Sprite{
 					Img: skeletonImg,
 					X:   170,
 					Y:   180,
 				},
-				true,
+				FollowsPlayer: true,
 			},
 			{
-				&Sprite{
+				Sprite: &entities.Sprite{
 					Img: skeletonImg,
 					X:   100,
 					Y:   155,
 				},
-				false,
+				FollowsPlayer: false,
 			},
 		},
-		potions: []*Potion{
+		potions: []*entities.Potion{
 			{
-				&Sprite{
+				Sprite: &entities.Sprite{
 					Img: potionImg,
 					X:   120,
 					Y:   128,
 				},
-				10,
+				HealAmount: 10,
 			},
 
 			{
-				&Sprite{
+				Sprite: &entities.Sprite{
 					Img: potionImg,
 					X:   190,
 					Y:   128,
 				},
-				10,
+				HealAmount: 10,
 			},
 		},
 		tileMapJSON:      tileMapJSON,
 		tileMapFloorImg:  tileMapFloorImg,
 		tileMapObjectImg: tileMapObjectImg,
+		camera: NewCamera(0.0, 0.0),
 	}); err != nil {
 		log.Fatal(err)
 	}

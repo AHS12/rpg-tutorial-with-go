@@ -3,17 +3,17 @@
         "height": 4300,
         "width": 2
     },
-    "activeFile": "",
+    "activeFile": "F:/Games/Ebiten_Projects/rpg-tutorial/assets/maps/spawn-map.json",
     "expandedProjectPaths": [
     ],
     "file.lastUsedOpenFilter": "All Files (*)",
     "fileStates": {
         "F:/Games/Ebiten_Projects/rpg-tutorial/assets/maps/spawn-map.json": {
-            "scale": 0.33,
+            "scale": 1,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 1171.2121212121212,
-                "y": 1127.2727272727273
+                "x": 799.5,
+                "y": 602
             }
         },
         "F:/Games/Ebiten_Projects/rpg-tutorial/assets/maps/tilesets/TilesetFloor.tsx": {
@@ -32,6 +32,9 @@
     "map.tileWidth": 16,
     "map.width": 100,
     "openFiles": [
+        "F:/Games/Ebiten_Projects/rpg-tutorial/assets/maps/spawn-map.json",
+        "F:/Games/Ebiten_Projects/rpg-tutorial/assets/maps/tilesets/TilesetFloor.tsx",
+        "F:/Games/Ebiten_Projects/rpg-tutorial/assets/maps/tilesets/TilesetNature.tsx"
     ],
     "project": "rpg-tutorial.tiled-project",
     "recentFiles": [
