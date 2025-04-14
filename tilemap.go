@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path"
 	"sort"
 )
 
@@ -23,10 +24,27 @@ type TileSetJSON struct {
 
 // TileMapJSON represents the entire tile map.
 type TileMapJSON struct {
-	Layers    []TileMapLayerJSON `json:"layers"`
-	TileSets  []TileSetJSON      `json:"tilesets"`
-	TileWidth int                `json:"tilewidth"`
+	Layers     []TileMapLayerJSON `json:"layers"`
+	TileSets   []TileSetJSON      `json:"tilesets"`
+	TileWidth  int                `json:"tilewidth"`
 	TileHeight int                `json:"tileheight"`
+}
+
+func (t *TileMapJSON) GenerateTileSets() ([]TileSet, error) {
+	tileSetList := make([]TileSet, 0)
+	//generate a tile map based on
+	for _, tileSetData := range t.TileSets {
+		tileSetPath := path.Join("assets/maps/", tileSetData.Source)
+		tileset, err := NewTileSet(tileSetPath, tileSetData.FirstGID)
+		if err != nil {
+			return nil, err
+		}
+
+		tileSetList = append(tileSetList, tileset)
+
+	}
+
+	return tileSetList, nil
 }
 
 // NewTileMapJSON loads and parses a TileMapJSON from a file.

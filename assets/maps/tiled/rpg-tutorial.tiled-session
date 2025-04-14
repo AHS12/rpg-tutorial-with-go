@@ -9,23 +9,39 @@
     "file.lastUsedOpenFilter": "All Files (*)",
     "fileStates": {
         "F:/Games/Ebiten_Projects/rpg-tutorial/assets/maps/spawn-map.json": {
-            "scale": 1,
+            "scale": 2,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 799.5,
-                "y": 602
+                "x": 672.75,
+                "y": 378
             }
         },
-        "F:/Games/Ebiten_Projects/rpg-tutorial/assets/maps/tilesets/TilesetFloor.tsx": {
+        "F:/Games/Ebiten_Projects/rpg-tutorial/assets/maps/tilesets/TilesetFloor.json": {
+            "dynamicWrapping": false,
             "scaleInDock": 1,
             "scaleInEditor": 1
+        },
+        "F:/Games/Ebiten_Projects/rpg-tutorial/assets/maps/tilesets/TilesetFloor.tsx": {
+            "dynamicWrapping": false,
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "F:/Games/Ebiten_Projects/rpg-tutorial/assets/maps/tilesets/TilesetNature.json": {
+            "dynamicWrapping": false,
+            "scaleInDock": 1,
+            "scaleInEditor": 3
         },
         "F:/Games/Ebiten_Projects/rpg-tutorial/assets/maps/tilesets/TilesetNature.tsx": {
             "scaleInDock": 1,
             "scaleInEditor": 1
+        },
+        "F:/Games/Ebiten_Projects/rpg-tutorial/assets/maps/tilesets/buildings.json": {
+            "dynamicWrapping": true,
+            "scaleInDock": 1,
+            "scaleInEditor": 4
         }
     },
-    "last.imagePath": "F:/Games/Ebiten_Projects/rpg-tutorial/assets/images",
+    "last.imagePath": "F:/Games/Ebiten_Projects/rpg-tutorial/assets/images/buildings",
     "map.height": 80,
     "map.lastUsedFormat": "json",
     "map.tileHeight": 16,
@@ -33,18 +49,23 @@
     "map.width": 100,
     "openFiles": [
         "F:/Games/Ebiten_Projects/rpg-tutorial/assets/maps/spawn-map.json",
-        "F:/Games/Ebiten_Projects/rpg-tutorial/assets/maps/tilesets/TilesetFloor.tsx",
-        "F:/Games/Ebiten_Projects/rpg-tutorial/assets/maps/tilesets/TilesetNature.tsx"
+        "F:/Games/Ebiten_Projects/rpg-tutorial/assets/maps/tilesets/TilesetFloor.json",
+        "F:/Games/Ebiten_Projects/rpg-tutorial/assets/maps/tilesets/TilesetNature.json",
+        "F:/Games/Ebiten_Projects/rpg-tutorial/assets/maps/tilesets/buildings.json"
     ],
     "project": "rpg-tutorial.tiled-project",
     "recentFiles": [
+        "F:/Games/Ebiten_Projects/rpg-tutorial/assets/maps/tilesets/buildings.json",
+        "F:/Games/Ebiten_Projects/rpg-tutorial/assets/maps/tilesets/TilesetNature.json",
+        "F:/Games/Ebiten_Projects/rpg-tutorial/assets/maps/tilesets/TilesetFloor.json",
+        "F:/Games/Ebiten_Projects/rpg-tutorial/assets/maps/spawn-map.json",
         "F:/Games/Ebiten_Projects/rpg-tutorial/assets/maps/tilesets/TilesetNature.tsx",
-        "F:/Games/Ebiten_Projects/rpg-tutorial/assets/maps/tilesets/TilesetFloor.tsx",
-        "F:/Games/Ebiten_Projects/rpg-tutorial/assets/maps/spawn-map.json"
+        "F:/Games/Ebiten_Projects/rpg-tutorial/assets/maps/tilesets/TilesetFloor.tsx"
     ],
-    "tileset.lastUsedFormat": "tsx",
+    "tileset.lastUsedFormat": "json",
     "tileset.tileSize": {
         "height": 16,
         "width": 16
-    }
+    },
+    "tileset.type": 1
 }

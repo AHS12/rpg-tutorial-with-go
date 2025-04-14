@@ -16,8 +16,7 @@ type Game struct {
 	enemies              []*entities.Enemy
 	potions              []*entities.Potion
 	tileMapJSON          *TileMapJSON
-	tileMapFloorImg      *ebiten.Image
-	tileMapObjectImg     *ebiten.Image
+	tileSets             []TileSet
 	connectedControllers []ebiten.GamepadID
 	GamepadID            ebiten.GamepadID
 	camera               *Camera
@@ -166,10 +165,10 @@ func (g *Game) Update() error {
 		}
 	}
 
-	g.camera.FollowTarget(g.player.X + TILE_SIZE/2, g.player.Y+ TILE_SIZE/2, 320, 240)
+	g.camera.FollowTarget(g.player.X+TILE_SIZE/2, g.player.Y+TILE_SIZE/2, 320, 240)
 	g.camera.Constrain(
-		float64(g.tileMapJSON.Layers[0].Width * TILE_SIZE),
-		float64(g.tileMapJSON.Layers[0].Height * TILE_SIZE),
+		float64(g.tileMapJSON.Layers[0].Width)*TILE_SIZE,
+		float64(g.tileMapJSON.Layers[0].Height)*TILE_SIZE,
 		320,
 		240,
 	)
@@ -184,59 +183,36 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	//start drawing map
 	opts := ebiten.DrawImageOptions{}
 
-	for _, layer := range g.tileMapJSON.Layers {
-		// fmt.Println("Starting to process Layer:", layer.Name, "ID:", layer.Id)
-		var tileset *ebiten.Image
-		var tilesetWidth int
-		var firstgid int
+	// loop over the layers
+	for layerIndex, layer := range g.tileMapJSON.Layers {
+		// loop over the tiles in the layer data
+		for index, id := range layer.Data {
 
-		if layer.Name == "Floor" {
-			tileset = g.tileMapFloorImg
-			tilesetWidth = tileset.Bounds().Dx() / TILE_SIZE
-			firstgid = g.tileMapJSON.TileSets[0].FirstGID
-		} else if layer.Name == "Object" {
-			tileset = g.tileMapObjectImg
-			tilesetWidth = tileset.Bounds().Dx() / TILE_SIZE
-			firstgid = g.tileMapJSON.TileSets[1].FirstGID
-		}
-
-		// Loop over the tiles
-		for index, tileID := range layer.Data {
-			opts.GeoM.Reset()
-
-			// Skip empty tiles
-			if tileID == 0 {
+			if id == 0 {
 				continue
 			}
 
-			// Calculate the tile position in the world
-			x := (index % layer.Width) * TILE_SIZE
-			y := (index / layer.Width) * TILE_SIZE
+			// get the tile position of the tile
+			x := index % layer.Width
+			y := index / layer.Width
 
-			// Adjust the tile ID based on the tileset's firstgid
-			adjustedID := tileID - firstgid + 1
+			// convert the tile position to pixel position
+			x *= TILE_SIZE
+			y *= TILE_SIZE
 
-			// Calculate the position in the tileset image
-			srcX := ((adjustedID - 1) % tilesetWidth) * TILE_SIZE
-			srcY := ((adjustedID - 1) / tilesetWidth) * TILE_SIZE
+			img := g.tileSets[layerIndex].Img(id)
 
-			// Safety check to ensure we're not accessing outside the tileset bounds
-			tilesetBounds := tileset.Bounds()
-			if srcX < 0 || srcY < 0 || srcX+16 > tilesetBounds.Dx() || srcY+16 > tilesetBounds.Dy() {
-				fmt.Printf("WARNING: Tile ID %d adjusted to %d gives invalid source rect (%d,%d,%d,%d) for tileset bounds (%d,%d)\n",
-					tileID, adjustedID, srcX, srcY, srcX+TILE_SIZE, srcY+TILE_SIZE, tilesetBounds.Dx(), tilesetBounds.Dy())
-				continue
-			}
-
-			// Draw the tile
 			opts.GeoM.Translate(float64(x), float64(y))
+
+			opts.GeoM.Translate(0.0, -(float64(img.Bounds().Dy()) + TILE_SIZE))
+
 			opts.GeoM.Translate(g.camera.X, g.camera.Y)
-			screen.DrawImage(
-				tileset.SubImage(image.Rect(srcX, srcY, srcX+TILE_SIZE, srcY+TILE_SIZE)).(*ebiten.Image),
-				&opts,
-			)
+
+			screen.DrawImage(img, &opts)
+
+			// reset the opts for the next tile
+			opts.GeoM.Reset()
 		}
-		// fmt.Println("Processing Layer Completed:", layer.Name, "ID:", layer.Id)
 	}
 
 	ebitenutil.DebugPrint(screen, fmt.Sprintf("HP: %d ", g.player.Health))
@@ -296,16 +272,12 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	tileMapFloorImg, _, err := ebitenutil.NewImageFromFile("assets/images/TilesetFloor.png")
-	if err != nil {
-		log.Fatal(err)
-	}
-	tileMapObjectImg, _, err := ebitenutil.NewImageFromFile("assets/images/TilesetNature.png")
+	tileSets, err := tileMapJSON.GenerateTileSets()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	if err := ebiten.RunGame(&Game{
+	game := Game{
 		player: &entities.Player{
 			Sprite: &entities.Sprite{
 				Img: playerImg,
@@ -360,10 +332,11 @@ func main() {
 			},
 		},
 		tileMapJSON:      tileMapJSON,
-		tileMapFloorImg:  tileMapFloorImg,
-		tileMapObjectImg: tileMapObjectImg,
-		camera: NewCamera(0.0, 0.0),
-	}); err != nil {
+		tileSets: tileSets,
+		camera:           NewCamera(0.0, 0.0),
+	}
+
+	if err := ebiten.RunGame(&game); err != nil {
 		log.Fatal(err)
 	}
 }
