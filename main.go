@@ -9,6 +9,7 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
+	"github.com/hajimehoshi/ebiten/v2/vector"
 )
 
 type Game struct {
@@ -20,6 +21,7 @@ type Game struct {
 	connectedControllers []ebiten.GamepadID
 	GamepadID            ebiten.GamepadID
 	camera               *Camera
+	colliders            []image.Rectangle
 }
 
 const (
@@ -27,6 +29,7 @@ const (
 	GP_SPEED  = 2.5
 	DEAD_ZONE = 0.1
 	TILE_SIZE = 16
+	ENEMY_SPEED = 0.8
 )
 
 var (
@@ -75,31 +78,31 @@ func (g *Game) handleGamepadInput() {
 
 func (g *Game) handleStandardGamepadButtons() {
 	if ebiten.IsStandardGamepadButtonPressed(g.GamepadID, GamepadButtonRight) {
-		g.player.X += GP_SPEED
+		g.player.Dx = GP_SPEED
 	}
 	if ebiten.IsStandardGamepadButtonPressed(g.GamepadID, GamepadButtonLeft) {
-		g.player.X -= GP_SPEED
+		g.player.Dx = -GP_SPEED
 	}
 	if ebiten.IsStandardGamepadButtonPressed(g.GamepadID, GamepadButtonUp) {
-		g.player.Y -= GP_SPEED
+		g.player.Dy = -GP_SPEED
 	}
 	if ebiten.IsStandardGamepadButtonPressed(g.GamepadID, GamepadButtonDown) {
-		g.player.Y += GP_SPEED
+		g.player.Dy = GP_SPEED
 	}
 }
 
 func (g *Game) handleNonStandardGamepadButtons() {
 	if ebiten.IsGamepadButtonPressed(g.GamepadID, FallbackButtonRight) { // Right
-		g.player.X += GP_SPEED
+		g.player.Dx = GP_SPEED
 	}
 	if ebiten.IsGamepadButtonPressed(g.GamepadID, FallbackButtonLeft) { // Left
-		g.player.X -= GP_SPEED
+		g.player.Dx = -GP_SPEED
 	}
 	if ebiten.IsGamepadButtonPressed(g.GamepadID, FallbackButtonUp) { // Up
-		g.player.Y -= GP_SPEED
+		g.player.Dy = -GP_SPEED
 	}
 	if ebiten.IsGamepadButtonPressed(g.GamepadID, FallbackButtonDown) { // Down
-		g.player.Y += GP_SPEED
+		g.player.Dy = GP_SPEED
 	}
 }
 
@@ -112,51 +115,110 @@ func (g *Game) handleAnalogStickMovement() {
 	yAxis := ebiten.GamepadAxisValue(g.GamepadID, 1)
 
 	if isOutsideDeadZone(xAxis, DEAD_ZONE) {
-		g.player.X += xAxis * GP_SPEED
+		g.player.Dx = xAxis * GP_SPEED
 	}
 	if isOutsideDeadZone(yAxis, DEAD_ZONE) {
-		g.player.Y += yAxis * GP_SPEED
+		g.player.Dy = yAxis * GP_SPEED
 	}
 }
 
 func (g *Game) handleKeyboardControls() {
 	if ebiten.IsKeyPressed(ebiten.KeyRight) || ebiten.IsKeyPressed(ebiten.KeyD) {
-		g.player.X += KB_SPEED
+		g.player.Dx = KB_SPEED
 	}
 	if ebiten.IsKeyPressed(ebiten.KeyLeft) || ebiten.IsKeyPressed(ebiten.KeyA) {
-		g.player.X -= KB_SPEED
+		g.player.Dx = -KB_SPEED
 	}
 	if ebiten.IsKeyPressed(ebiten.KeyUp) || ebiten.IsKeyPressed(ebiten.KeyW) {
-		g.player.Y -= KB_SPEED
+		g.player.Dy = -KB_SPEED
 	}
 	if ebiten.IsKeyPressed(ebiten.KeyDown) || ebiten.IsKeyPressed(ebiten.KeyS) {
-		g.player.Y += KB_SPEED
+		g.player.Dy = KB_SPEED
+	}
+}
+
+func (g *Game) handleMovement() {
+	// Reset movement
+	g.player.Dx = 0
+	g.player.Dy = 0
+
+	// Handle input
+	g.handleKeyboardControls()
+	g.handleGamepadInput()
+
+	// Move player
+	g.player.X += g.player.Dx
+	g.player.Y += g.player.Dy
+}
+
+func CheckCollisionHorizontal(sprite *entities.Sprite, colliders []image.Rectangle) {
+	for _, collider := range colliders {
+		if collider.Overlaps(
+			image.Rect(
+				int(sprite.X),
+				int(sprite.Y),
+				int(sprite.X)+16.0,
+				int(sprite.Y)+16.0,
+			),
+		) {
+			if sprite.Dx > 0.0 {
+				sprite.X = float64(collider.Min.X) - 16.0
+			} else if sprite.Dx < 0.0 {
+				sprite.X = float64(collider.Max.X)
+			}
+		}
+	}
+}
+
+func CheckCollisionVertical(sprite *entities.Sprite, colliders []image.Rectangle) {
+	for _, collider := range colliders {
+		if collider.Overlaps(
+			image.Rect(
+				int(sprite.X),
+				int(sprite.Y),
+				int(sprite.X)+16.0,
+				int(sprite.Y)+16.0,
+			),
+		) {
+			if sprite.Dy > 0.0 {
+				sprite.Y = float64(collider.Min.Y) - 16.0
+			} else if sprite.Dy < 0.0 {
+				sprite.Y = float64(collider.Max.X)
+			}
+		}
 	}
 }
 
 func (g *Game) Update() error {
 
-	// Keyboard Controls
-	g.handleKeyboardControls()
 	// detect controllers
 	g.detectAndSelectGamepad()
-	// Gamepad Controls
-	g.handleGamepadInput()
+	g.handleMovement()
+
+	//collision
+	CheckCollisionHorizontal(g.player.Sprite, g.colliders)
+	CheckCollisionVertical(g.player.Sprite, g.colliders)
 
 	//spawning enemy
 	for _, enemy := range g.enemies {
+		enemy.Dx = 0.00
+		enemy.Dy = 0.00
 		if enemy.FollowsPlayer {
 			if enemy.X < g.player.X {
-				enemy.X += 0.8
+				enemy.Dx += 0.8
 			} else if enemy.X > g.player.X {
-				enemy.X -= 0.8
+				enemy.Dx -= 0.8
 			}
 			if enemy.Y < g.player.Y {
-				enemy.Y += 0.8
+				enemy.Dy += 0.8
 			} else if enemy.Y > g.player.Y {
-				enemy.Y -= 0.8
+				enemy.Dy -= 0.8
 			}
 		}
+		enemy.X += enemy.Dx
+		CheckCollisionHorizontal(enemy.Sprite, g.colliders)
+		enemy.Y += enemy.Dy
+		CheckCollisionVertical(enemy.Sprite, g.colliders)
 	}
 
 	for _, potion := range g.potions {
@@ -242,6 +304,19 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		opts.GeoM.Reset()
 	}
 	opts.GeoM.Reset()
+
+	for _, collider := range g.colliders {
+		vector.StrokeRect(
+			screen,
+			float32(collider.Min.X)+float32(g.camera.X), //for making rectangle not moving with camera
+			float32(collider.Min.Y)+float32(g.camera.Y),
+			float32(collider.Dx()),
+			float32(collider.Dy()),
+			1.0,
+			color.RGBA{255, 0, 0, 255},
+			true,
+		)
+	}
 
 }
 
@@ -331,9 +406,12 @@ func main() {
 				HealAmount: 10,
 			},
 		},
-		tileMapJSON:      tileMapJSON,
-		tileSets: tileSets,
-		camera:           NewCamera(0.0, 0.0),
+		tileMapJSON: tileMapJSON,
+		tileSets:    tileSets,
+		camera:      NewCamera(0.0, 0.0),
+		colliders: []image.Rectangle{
+			image.Rect(100, 100, 116, 116),
+		},
 	}
 
 	if err := ebiten.RunGame(&game); err != nil {
